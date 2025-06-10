@@ -1,14 +1,11 @@
 import mongoose from 'mongoose'
 
-export const connectDB = async (): Promise<void> => {
+export const connectDB = async (uri: string): Promise<void> => {
 	try {
-		const mongoURI =
-			process.env.MONGODB_URI || 'mongodb://localhost:27017/todo-telegram'
-
 		console.log('🔄 Connecting to MongoDB...')
-		console.log(`📍 URI: ${mongoURI}`)
+		console.log(`📍 URI: ${uri}`)
 
-		await mongoose.connect(mongoURI)
+		await mongoose.connect(uri)
 
 		console.log('✅ MongoDB connected successfully')
 
