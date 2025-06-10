@@ -2,8 +2,8 @@ import { Model } from 'mongoose'
 import { ProjectDocument } from '../models/Project'
 import { TaskDocument } from '../models/Task'
 import { CreateProjectDto, UpdateProjectDto } from '../types/project.types'
-import { BaseService } from '../utils/base.service'
 import { HttpError } from '../utils/errors'
+import { BaseService } from './base.service'
 
 export class ProjectService extends BaseService<ProjectDocument> {
 	constructor(model: Model<ProjectDocument>) {
