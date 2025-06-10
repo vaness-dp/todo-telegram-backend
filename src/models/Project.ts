@@ -1,7 +1,5 @@
-import mongoose, { Document, Schema } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 import type { IProject } from '../types/project.types'
-
-export interface ProjectDocument extends Omit<IProject, '_id'>, Document {}
 
 const ProjectSchema: Schema = new Schema(
 	{
@@ -33,4 +31,12 @@ const ProjectSchema: Schema = new Schema(
 // Index for better query performance
 ProjectSchema.index({ userId: 1, createdAt: -1 })
 
-export default mongoose.model<ProjectDocument>('Project', ProjectSchema)
+// Virtual for tasks
+ProjectSchema.virtual('tasks', {
+	ref: 'Task',
+	localField: '_id',
+	foreignField: 'projectId'
+})
+
+export type ProjectDocument = mongoose.Document & Omit<IProject, '_id'>
+export const Project = mongoose.model<ProjectDocument>('Project', ProjectSchema)
