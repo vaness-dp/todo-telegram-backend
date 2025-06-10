@@ -1,108 +1,128 @@
-# Todo API Documentation
+# 📚 Todo API Documentation
 
-## Base URL
+## 🌐 Base URL
 
 ```
 http://localhost:5001/api
 ```
 
-## Проекты (Projects)
+## 🔑 Authentication
 
-### Получить все проекты
+> ⚠️ Currently using simple userId-based authentication. JWT implementation planned for future releases.
+
+## 🚦 Rate Limiting
+
+- **Window**: 15 minutes
+- **Max Requests**: 100 per IP
+- **Status Code**: 429 Too Many Requests
+
+## 🏗 Common Patterns
+
+### Response Format
+
+**Success Response:**
+
+```typescript
+interface SuccessResponse<T> {
+	success: true
+	data: T
+	message?: string
+}
+```
+
+**Error Response:**
+
+```typescript
+interface ErrorResponse {
+	success: false
+	error: string
+	details?: any
+}
+```
+
+### Pagination
+
+```typescript
+interface PaginatedResponse<T> {
+	items: T[]
+	pagination: {
+		total: number
+		page: number
+		pages: number
+	}
+}
+```
+
+## 📁 Projects API
+
+### Get Projects List
 
 ```http
-GET /projects?userId={userId}
+GET /projects
 ```
 
 **Query Parameters:**
 
-- `userId` (required): ID пользователя
+| Parameter | Type   | Description    | Required |
+| --------- | ------ | -------------- | -------- |
+| userId    | string | Filter by user | Yes      |
+| page      | number | Page number    | No       |
+| limit     | number | Items per page | No       |
 
-**Response:**
+**Response:** `SuccessResponse<PaginatedResponse<IProject>>`
 
-```json
-{
-	"success": true,
-	"count": 2,
-	"data": [
-		{
-			"_id": "project_id",
-			"name": "Проект 1",
-			"description": "Описание проекта",
-			"userId": "user_id",
-			"createdAt": "2024-03-10T08:00:00.000Z",
-			"updatedAt": "2024-03-10T08:00:00.000Z"
-		}
-	]
-}
-```
-
-### Получить один проект
+### Get Project Details
 
 ```http
 GET /projects/{projectId}
 ```
 
-**Response:**
+**Response:** `SuccessResponse<IProject>`
 
-```json
-{
-	"success": true,
-	"data": {
-		"_id": "project_id",
-		"name": "Проект 1",
-		"description": "Описание проекта",
-		"userId": "user_id",
-		"createdAt": "2024-03-10T08:00:00.000Z",
-		"updatedAt": "2024-03-10T08:00:00.000Z"
-	}
-}
-```
-
-### Создать проект
+### Create Project
 
 ```http
 POST /projects
 ```
 
-**Request Body:**
+**Request Body:** `CreateProjectDto`
 
-```json
-{
-	"name": "Новый проект",
-	"description": "Описание проекта",
-	"userId": "user_id"
+```typescript
+interface CreateProjectDto {
+	name: string // max 100 chars
+	description: string // max 500 chars
+	userId: string
 }
 ```
 
-**Валидация:**
+**Response:** `SuccessResponse<IProject>`
 
-- `name`: обязательное, максимум 100 символов
-- `description`: обязательное, максимум 500 символов
-- `userId`: обязательное
-
-### Обновить проект
+### Update Project
 
 ```http
 PUT /projects/{projectId}
 ```
 
-**Request Body:**
+**Request Body:** `UpdateProjectDto`
 
-```json
-{
-	"name": "Обновленное название",
-	"description": "Обновленное описание"
+```typescript
+interface UpdateProjectDto {
+	name?: string
+	description?: string
 }
 ```
 
-### Удалить проект
+**Response:** `SuccessResponse<IProject>`
+
+### Delete Project
 
 ```http
 DELETE /projects/{projectId}
 ```
 
-### Получить статистику проекта
+**Response:** `SuccessResponse<void>`
+
+### Get Project Statistics
 
 ```http
 GET /projects/{projectId}/stats
@@ -110,33 +130,23 @@ GET /projects/{projectId}/stats
 
 **Response:**
 
-```json
-{
-	"success": true,
-	"data": {
-		"project": {
-			"_id": "project_id",
-			"name": "Проект 1",
-			"description": "Описание"
-		},
-		"stats": {
-			"totalTasks": 10,
-			"completedTasks": 5,
-			"pendingTasks": 5,
-			"completionRate": 50,
-			"tasksByPriority": {
-				"high": 2,
-				"medium": 5,
-				"low": 3
-			}
-		}
+```typescript
+interface ProjectStats {
+	totalTasks: number
+	completedTasks: number
+	pendingTasks: number
+	completionRate: number
+	tasksByPriority: {
+		high: number
+		medium: number
+		low: number
 	}
 }
 ```
 
-## Задачи (Tasks)
+## ✅ Tasks API
 
-### Получить задачи проекта
+### Get Project Tasks
 
 ```http
 GET /projects/{projectId}/tasks
@@ -144,91 +154,79 @@ GET /projects/{projectId}/tasks
 
 **Query Parameters:**
 
-- `completed` (optional): фильтр по статусу завершения (true/false)
-- `priority` (optional): фильтр по приоритету (high/medium/low)
-- `sort` (optional): сортировка (priority/completed/title)
+| Parameter | Type    | Description                        | Default   |
+| --------- | ------- | ---------------------------------- | --------- |
+| completed | boolean | Filter by completion status        | -         |
+| priority  | string  | Filter by priority                 | -         |
+| sort      | string  | Sort by (priority/completed/title) | createdAt |
+| page      | number  | Page number                        | 1         |
+| limit     | number  | Items per page                     | 10        |
 
-**Response:**
+**Response:** `SuccessResponse<PaginatedResponse<ITask>>`
 
-```json
-{
-	"success": true,
-	"count": 2,
-	"data": [
-		{
-			"_id": "task_id",
-			"title": "Задача 1",
-			"description": "Описание задачи",
-			"priority": "high",
-			"completed": false,
-			"projectId": "project_id",
-			"createdAt": "2024-03-10T08:00:00.000Z",
-			"updatedAt": "2024-03-10T08:00:00.000Z"
-		}
-	]
-}
-```
-
-### Получить одну задачу
+### Get Task Details
 
 ```http
 GET /tasks/{taskId}
 ```
 
-### Создать задачу
+**Response:** `SuccessResponse<ITask>`
+
+### Create Task
 
 ```http
 POST /tasks
 ```
 
-**Request Body:**
+**Request Body:** `CreateTaskDto`
 
-```json
-{
-	"title": "Новая задача",
-	"description": "Описание задачи",
-	"priority": "medium",
-	"projectId": "project_id"
+```typescript
+interface CreateTaskDto {
+	title: string // max 200 chars
+	description?: string // max 1000 chars
+	priority: 'high' | 'medium' | 'low'
+	projectId: string
 }
 ```
 
-**Валидация:**
+**Response:** `SuccessResponse<ITask>`
 
-- `title`: обязательное, максимум 200 символов
-- `description`: опциональное, максимум 1000 символов
-- `priority`: обязательное, одно из: high/medium/low
-- `projectId`: обязательное, должен существовать
-
-### Обновить задачу
+### Update Task
 
 ```http
 PUT /tasks/{taskId}
 ```
 
-**Request Body:**
+**Request Body:** `UpdateTaskDto`
 
-```json
-{
-	"title": "Обновленное название",
-	"description": "Обновленное описание",
-	"priority": "high",
-	"completed": true
+```typescript
+interface UpdateTaskDto {
+	title?: string
+	description?: string
+	priority?: 'high' | 'medium' | 'low'
+	completed?: boolean
 }
 ```
 
-### Переключить статус задачи
+**Response:** `SuccessResponse<ITask>`
+
+### Toggle Task Status
 
 ```http
 PATCH /tasks/{taskId}/toggle
 ```
 
-### Удалить задачу
+**Response:** `SuccessResponse<ITask>`
+
+### Delete Task
 
 ```http
 DELETE /tasks/{taskId}
 ```
 
-### Массовое обновление задач
+**Response:** `SuccessResponse<void>`
+
+### Bulk Update Tasks
 
 ```http
 PATCH /tasks/bulk
@@ -236,57 +234,71 @@ PATCH /tasks/bulk
 
 **Request Body:**
 
-```json
-{
-	"taskIds": ["task_id1", "task_id2"],
-	"updates": {
-		"completed": true,
-		"priority": "high"
+```typescript
+interface BulkUpdateTasksDto {
+	taskIds: string[]
+	updates: {
+		completed?: boolean
+		priority?: 'high' | 'medium' | 'low'
 	}
 }
 ```
 
-## Ограничения и безопасность
+**Response:** `SuccessResponse<{ modifiedCount: number }>`
 
-1. Rate Limiting: 100 запросов за 15 минут с одного IP
-2. CORS: разрешены запросы только с `http://localhost:3000` (или из `FRONTEND_URL`)
-3. Все ответы содержат поле `success` для быстрой проверки результата
-4. При ошибках возвращается объект с полями:
-   ```json
-   {
-   	"success": false,
-   	"error": "Описание ошибки"
-   }
-   ```
+## 🔒 Security
 
-## Коды ответов
-
-- 200: Успешный запрос
-- 201: Успешное создание
-- 400: Ошибка в запросе
-- 404: Ресурс не найден
-- 429: Превышен лимит запросов
-- 500: Внутренняя ошибка сервера
-
-## Типы данных
-
-### Project
+### CORS Configuration
 
 ```typescript
-interface IProject {
+const corsOptions = {
+	origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+	credentials: true
+}
+```
+
+### HTTP Headers (Helmet)
+
+```typescript
+const helmetOptions = {
+	contentSecurityPolicy:
+		process.env.NODE_ENV === 'development' ? false : undefined
+}
+```
+
+## 📊 Status Codes
+
+| Code | Description             |
+| ---- | ----------------------- |
+| 200  | Success - GET/PUT/PATCH |
+| 201  | Created - POST          |
+| 400  | Bad Request             |
+| 401  | Unauthorized            |
+| 403  | Forbidden               |
+| 404  | Not Found               |
+| 429  | Too Many Requests       |
+| 500  | Server Error            |
+
+## 📋 Data Models
+
+### Project Model
+
+```typescript
+interface IProject extends Document {
 	_id: string
 	name: string
 	description: string
 	userId: string
+	tasks?: ITask[] // Virtual
 	createdAt: Date
 	updatedAt: Date
 }
 ```
 
-### Task
+### Task Model
 
 ```typescript
-interface ITask {
+interface ITask extends Document {
 	_id: string
 	title: string
 	description?: string
@@ -296,4 +308,37 @@ interface ITask {
 	createdAt: Date
 	updatedAt: Date
 }
+```
+
+## 🔄 Service Layer
+
+### Base Service
+
+```typescript
+class BaseService<T extends Document> {
+	async findById(id: string): Promise<T>
+	async create(data: Partial<T>): Promise<T>
+	async update(id: string, data: Partial<T>): Promise<T>
+	async delete(id: string): Promise<void>
+	async findWithPagination(
+		query: any,
+		page?: number,
+		limit?: number
+	): Promise<PaginatedResponse<T>>
+}
+```
+
+## 🧪 Testing
+
+### Example Test Request
+
+```typescript
+const response = await request(app).post('/api/projects').send({
+	name: 'Test Project',
+	description: 'Test Description',
+	userId: 'test-user-id'
+})
+
+expect(response.status).toBe(201)
+expect(response.body.success).toBe(true)
 ```

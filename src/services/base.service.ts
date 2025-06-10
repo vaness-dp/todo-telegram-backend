@@ -1,5 +1,5 @@
 import { Document, Model } from 'mongoose'
-import { HttpError } from './errors'
+import { HttpError } from '../utils/errors'
 
 export class BaseService<T extends Document> {
 	constructor(protected readonly model: Model<T>) {}
