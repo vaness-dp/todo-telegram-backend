@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express'
 import { asyncHandler } from '../middleware/errorHandler'
-import Project from '../models/Project'
+import { Project } from '../models/Project'
 import Task from '../models/Task'
 import type { CreateProjectDto, UpdateProjectDto } from '../types/project.types'
 
