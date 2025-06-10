@@ -1,11 +1,12 @@
 import { Model } from 'mongoose'
-import { Project } from '../models/Project'
+import { ProjectDocument } from '../models/Project'
+import { TaskDocument } from '../models/Task'
 import { CreateProjectDto, UpdateProjectDto } from '../types/project.types'
 import { BaseService } from '../utils/base.service'
 import { HttpError } from '../utils/errors'
 
-export class ProjectService extends BaseService<Project> {
-	constructor(model: Model<Project>) {
+export class ProjectService extends BaseService<ProjectDocument> {
+	constructor(model: Model<ProjectDocument>) {
 		super(model)
 	}
 
@@ -17,7 +18,7 @@ export class ProjectService extends BaseService<Project> {
 	async createProject(
 		userId: string,
 		data: CreateProjectDto
-	): Promise<Project> {
+	): Promise<ProjectDocument> {
 		return this.create({ ...data, userId })
 	}
 
@@ -31,7 +32,7 @@ export class ProjectService extends BaseService<Project> {
 		userId: string,
 		projectId: string,
 		data: UpdateProjectDto
-	): Promise<Project> {
+	): Promise<ProjectDocument> {
 		const project = await this.findById(projectId)
 
 		if (project.userId.toString() !== userId) {
@@ -71,7 +72,9 @@ export class ProjectService extends BaseService<Project> {
 	 * @param projectId - Project ID
 	 */
 	async getProjectStats(projectId: string) {
-		const project = await this.model.findById(projectId).populate('tasks')
+		const project = await this.model
+			.findById(projectId)
+			.populate<{ tasks: TaskDocument[] }>('tasks')
 		if (!project) {
 			throw new HttpError(404, 'Project not found')
 		}
@@ -79,10 +82,12 @@ export class ProjectService extends BaseService<Project> {
 		const tasks = project.tasks || []
 		return {
 			total: tasks.length,
-			completed: tasks.filter(task => task.completed).length,
-			high: tasks.filter(task => task.priority === 'high').length,
-			medium: tasks.filter(task => task.priority === 'medium').length,
-			low: tasks.filter(task => task.priority === 'low').length
+			completed: tasks.filter((task: TaskDocument) => task.completed).length,
+			high: tasks.filter((task: TaskDocument) => task.priority === 'high')
+				.length,
+			medium: tasks.filter((task: TaskDocument) => task.priority === 'medium')
+				.length,
+			low: tasks.filter((task: TaskDocument) => task.priority === 'low').length
 		}
 	}
 }
