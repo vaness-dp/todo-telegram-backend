@@ -4,10 +4,10 @@ const helmet = require('helmet')
 const rateLimit = require('express-rate-limit')
 const cookieParser = require('cookie-parser')
 const mongoose = require('mongoose')
+const { body, param, validationResult } = require('express-validator')
 require('dotenv').config()
 
 const app = express()
-
 app.set('trust proxy', 1)
 
 // Configuration
@@ -19,43 +19,30 @@ const config = {
 	frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000'
 }
 
-console.log('🔍 App Config loaded:')
-console.log('Environment:', config.environment)
-console.log('Frontend URL:', config.frontendUrl)
-console.log('MongoDB URI length:', config.mongoUri.length)
-console.log('MongoDB URI starts with:', config.mongoUri.substring(0, 30))
-console.log(
-	'MongoDB URI ends with:',
-	config.mongoUri.substring(config.mongoUri.length - 30)
-)
-
 // Security Configuration
-const getSecurityConfig = isDev => {
-	return {
-		cors: {
-			origin: [
-				config.frontendUrl,
-				'http://localhost:3000',
-				'https://todo-frontend-h25f8iv6y-vaness-dps-projects.vercel.app',
-				'https://todo-frontend-orpin-one.vercel.app',
-				/^https:\/\/todo-frontend-.*\.vercel\.app$/
-			],
-			credentials: true,
-			methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-			allowedHeaders: ['Content-Type', 'Authorization']
-		},
-		helmet: {
-			contentSecurityPolicy: isDev ? false : undefined,
-			crossOriginEmbedderPolicy: false
-		},
-		rateLimiting: {
-			windowMs: 15 * 60 * 1000,
-			max: isDev ? 1000 : 100
-		}
+const securityConfig = {
+	cors: {
+		origin: [
+			config.frontendUrl,
+			'http://localhost:3000',
+			'https://todo-frontend-h25f8iv6y-vaness-dps-projects.vercel.app',
+			'https://todo-frontend-orpin-one.vercel.app',
+			/^https:\/\/todo-frontend-.*\.vercel\.app$/
+		],
+		credentials: true,
+		methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+		allowedHeaders: ['Content-Type', 'Authorization']
+	},
+	helmet: {
+		contentSecurityPolicy:
+			config.environment === 'development' ? false : undefined,
+		crossOriginEmbedderPolicy: false
+	},
+	rateLimiting: {
+		windowMs: 15 * 60 * 1000,
+		max: config.environment === 'development' ? 1000 : 100
 	}
 }
-
-const securityConfig = getSecurityConfig(config.environment === 'development')
 
 // Middleware
 app.use(helmet(securityConfig.helmet))
@@ -69,212 +56,75 @@ app.disable('x-powered-by')
 // Database Connection
 const connectDB = async uri => {
 	try {
-		console.log('🔄 Connecting to MongoDB...')
 		await mongoose.connect(uri)
 		console.log('✅ MongoDB connected successfully')
-		const dbName = mongoose.connection.db?.databaseName
-		console.log(`📊 Database: ${dbName}`)
 	} catch (error) {
 		console.error('❌ MongoDB connection error:', error)
-		throw error
 	}
 }
 
-// Connect to database if not already connected
 if (mongoose.connection.readyState === 0) {
 	connectDB(config.mongoUri)
 }
 
+// Models
 const projectSchema = new mongoose.Schema(
 	{
-		name: {
-			type: String,
-			required: [true, 'Project name is required'],
-			trim: true,
-			maxlength: [100, 'Project name cannot exceed 100 characters']
-		},
-		description: {
-			type: String,
-			required: [true, 'Project description is required'],
-			trim: true,
-			maxlength: [500, 'Project description cannot exceed 500 characters']
-		},
-		userId: {
-			type: String,
-			required: [true, 'User ID is required']
-		}
+		name: { type: String, required: true, trim: true, maxlength: 100 },
+		description: { type: String, required: true, trim: true, maxlength: 500 },
+		userId: { type: String, required: true }
 	},
-	{
-		timestamps: true
-	}
+	{ timestamps: true }
 )
 
 const taskSchema = new mongoose.Schema(
 	{
-		title: {
-			type: String,
-			required: [true, 'Task title is required'],
-			trim: true,
-			maxlength: [200, 'Task title cannot exceed 200 characters']
-		},
-		description: {
-			type: String,
-			trim: true,
-			maxlength: [1000, 'Task description cannot exceed 1000 characters']
-		},
+		title: { type: String, required: true, trim: true, maxlength: 200 },
+		description: { type: String, trim: true, maxlength: 1000 },
 		priority: {
 			type: String,
 			enum: ['high', 'medium', 'low'],
 			default: 'medium'
 		},
-		completed: {
-			type: Boolean,
-			default: false
-		},
+		completed: { type: Boolean, default: false },
 		projectId: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'Project',
-			required: [true, 'Project ID is required']
+			required: true
 		}
 	},
-	{
-		timestamps: true
-	}
+	{ timestamps: true }
 )
-
-const asyncHandler = fn => (req, res, next) =>
-	Promise.resolve(fn(req, res, next)).catch(next)
-
-const errorHandler = (err, req, res, next) => {
-	let error = { ...err }
-	error.message = err.message
-
-	console.error(err)
-
-	// Mongoose bad ObjectId
-	if (err.name === 'CastError') {
-		const message = 'Resource not found'
-		error = { name: 'CastError', message, statusCode: 404 }
-	}
-
-	// Mongoose duplicate key
-	if (err.name === 'MongoError' && err.code === 11000) {
-		const message = 'Duplicate field value entered'
-		error = { name: 'MongoError', message, statusCode: 400 }
-	}
-
-	// Mongoose validation error
-	if (err.name === 'ValidationError') {
-		const message = Object.values(err.errors)
-			.map(val => val.message)
-			.join(', ')
-		error = { name: 'ValidationError', message, statusCode: 400 }
-	}
-
-	res.status(error.statusCode || 500).json({
-		success: false,
-		error: error.message || 'Server Error',
-		...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-	})
-}
-
-const { body, param, validationResult } = require('express-validator')
-
-const handleValidationErrors = (req, res, next) => {
-	const errors = validationResult(req)
-	if (!errors.isEmpty()) {
-		return res.status(400).json({
-			success: false,
-			error: 'Validation failed',
-			details: errors.array()
-		})
-	}
-	next()
-}
-
-const validateProject = [
-	body('name')
-		.trim()
-		.notEmpty()
-		.withMessage('Project name is required')
-		.isLength({ max: 100 })
-		.withMessage('Project name cannot exceed 100 characters'),
-	body('description')
-		.trim()
-		.notEmpty()
-		.withMessage('Project description is required')
-		.isLength({ max: 500 })
-		.withMessage('Project description cannot exceed 500 characters'),
-	body('userId').notEmpty().withMessage('User ID is required'),
-	handleValidationErrors
-]
-
-const validateObjectId = [
-	param('id').isMongoId().withMessage('Invalid ID format'),
-	handleValidationErrors
-]
 
 const Project =
 	mongoose.models.Project || mongoose.model('Project', projectSchema)
 const Task = mongoose.models.Task || mongoose.model('Task', taskSchema)
 
-// Project Controllers
-const getProjects = asyncHandler(async (req, res) => {
-	const { userId } = req.query
+// Error Handler
+const asyncHandler = fn => (req, res, next) =>
+	Promise.resolve(fn(req, res, next)).catch(next)
 
-	if (!userId) {
-		return res.status(400).json({
-			success: false,
-			error: 'User ID is required'
-		})
+// Validation
+const handleValidationErrors = (req, res, next) => {
+	const errors = validationResult(req)
+	if (!errors.isEmpty()) {
+		return res
+			.status(400)
+			.json({
+				success: false,
+				error: 'Validation failed',
+				details: errors.array()
+			})
 	}
+	next()
+}
 
-	const projects = await Project.find({ userId }).sort({ createdAt: -1 })
-
-	res.status(200).json({
-		success: true,
-		count: projects.length,
-		data: projects
-	})
-})
-
-const getProject = asyncHandler(async (req, res) => {
-	const project = await Project.findById(req.params.id)
-
-	if (!project) {
-		return res.status(404).json({
-			success: false,
-			error: 'Project not found'
-		})
-	}
-
-	res.status(200).json({
-		success: true,
-		data: project
-	})
-})
-
-const createProject = asyncHandler(async (req, res) => {
-	const { name, description, userId } = req.body
-
-	const project = await Project.create({
-		name,
-		description,
-		userId
-	})
-
-	res.status(201).json({
-		success: true,
-		data: project
-	})
-})
+const validateProjectId = [
+	param('projectId').isMongoId().withMessage('Invalid project ID format'),
+	handleValidationErrors
+]
 
 // Routes
-app.get('/api/projects', getProjects)
-app.post('/api/projects', validateProject, createProject)
-app.get('/api/projects/:id', validateObjectId, getProject)
-
-// Health check
 app.get('/api/health', (req, res) => {
 	res.status(200).json({
 		status: 'ok',
@@ -283,25 +133,75 @@ app.get('/api/health', (req, res) => {
 	})
 })
 
-// Root route
-app.get('/api', (req, res) => {
-	res.status(200).json({
-		message: 'Todo Telegram API',
-		version: '1.0.0',
-		environment: config.environment
+app.get(
+	'/api/projects',
+	asyncHandler(async (req, res) => {
+		const { userId } = req.query
+		if (!userId) {
+			return res
+				.status(400)
+				.json({ success: false, error: 'User ID is required' })
+		}
+		const projects = await Project.find({ userId }).sort({ createdAt: -1 })
+		res
+			.status(200)
+			.json({ success: true, count: projects.length, data: projects })
 	})
-})
+)
+
+app.get(
+	'/api/projects/:projectId/tasks',
+	validateProjectId,
+	asyncHandler(async (req, res) => {
+		const { projectId } = req.params
+
+		// Check if project exists
+		const project = await Project.findById(projectId)
+		if (!project) {
+			return res
+				.status(404)
+				.json({ success: false, error: 'Project not found' })
+		}
+
+		const tasks = await Task.find({ projectId }).sort({ createdAt: -1 })
+		res.status(200).json({ success: true, count: tasks.length, data: tasks })
+	})
+)
+
+app.post(
+	'/api/tasks',
+	asyncHandler(async (req, res) => {
+		const { title, description, priority, projectId } = req.body
+
+		// Basic validation
+		if (!title || !projectId) {
+			return res
+				.status(400)
+				.json({ success: false, error: 'Title and projectId are required' })
+		}
+
+		// Check if project exists
+		const project = await Project.findById(projectId)
+		if (!project) {
+			return res
+				.status(404)
+				.json({ success: false, error: 'Project not found' })
+		}
+
+		const task = await Task.create({
+			title,
+			description,
+			priority,
+			projectId,
+			completed: false
+		})
+		res.status(201).json({ success: true, data: task })
+	})
+)
 
 // 404 handler
 app.use('*', (req, res) => {
-	res.status(404).json({
-		error: 'Route not found',
-		path: req.originalUrl
-	})
+	res.status(404).json({ error: 'Route not found', path: req.originalUrl })
 })
 
-// Global error handler
-app.use(errorHandler)
-
-// Export app (в самом конце файла!)
 module.exports = app
