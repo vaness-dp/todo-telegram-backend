@@ -8,6 +8,8 @@ require('dotenv').config()
 
 const app = express()
 
+app.set('trust proxy', 1)
+
 // Configuration
 const config = {
 	port: parseInt(process.env.PORT || '5001', 10),
@@ -20,6 +22,12 @@ const config = {
 console.log('🔍 App Config loaded:')
 console.log('Environment:', config.environment)
 console.log('Frontend URL:', config.frontendUrl)
+console.log('MongoDB URI length:', config.mongoUri.length)
+console.log('MongoDB URI starts with:', config.mongoUri.substring(0, 30))
+console.log(
+	'MongoDB URI ends with:',
+	config.mongoUri.substring(config.mongoUri.length - 30)
+)
 
 // Security Configuration
 const getSecurityConfig = isDev => {
@@ -297,5 +305,3 @@ app.use(errorHandler)
 
 // Export app (в самом конце файла!)
 module.exports = app
-
-// module.exports = app будет в самом конце!
