@@ -8,6 +8,7 @@ const { body, param, validationResult } = require('express-validator')
 require('dotenv').config()
 
 const app = express()
+// Для Vercel и других прокси обязательно trust proxy
 app.set('trust proxy', 1)
 
 // Configuration
@@ -108,19 +109,18 @@ const asyncHandler = fn => (req, res, next) =>
 const handleValidationErrors = (req, res, next) => {
 	const errors = validationResult(req)
 	if (!errors.isEmpty()) {
-		return res
-			.status(400)
-			.json({
-				success: false,
-				error: 'Validation failed',
-				details: errors.array()
-			})
+		return res.status(400).json({
+			success: false,
+			error: 'Validation failed',
+			details: errors.array()
+		})
 	}
 	next()
 }
 
+// Проверка projectId — только что это MongoId
 const validateProjectId = [
-	param('projectId').isMongoId().withMessage('Invalid project ID format'),
+	param('projectId').isString().withMessage('Invalid project ID'),
 	handleValidationErrors
 ]
 
@@ -149,57 +149,74 @@ app.get(
 	})
 )
 
+// app.get(
+// 	'/api/projects/:projectId/tasks',
+// 	validateProjectId,
+// 	asyncHandler(async (req, res) => {
+// 		const { projectId } = req.params
+
+// 		// Check if project exists
+// 		const project = await Project.findById(projectId)
+// 		if (!project) {
+// 			return res
+// 				.status(404)
+// 				.json({ success: false, error: 'Project not found' })
+// 		}
+
+// 		const tasks = await Task.find({ projectId }).sort({ createdAt: -1 })
+// 		res.status(200).json({ success: true, count: tasks.length, data: tasks })
+// 	})
+// )
+
+// Получить задачи по проекту
 app.get(
 	'/api/projects/:projectId/tasks',
 	validateProjectId,
 	asyncHandler(async (req, res) => {
 		const { projectId } = req.params
-
-		// Check if project exists
-		const project = await Project.findById(projectId)
-		if (!project) {
-			return res
-				.status(404)
-				.json({ success: false, error: 'Project not found' })
+		try {
+			const project = await Project.findById(projectId)
+			if (!project) {
+				return res.status(404).json({ success: false, error: 'Project not found' })
+			}
+			const tasks = await Task.find({ projectId }).sort({ createdAt: -1 })
+			res.status(200).json({ success: true, count: tasks.length, data: tasks })
+		} catch (error) {
+			console.error('Error fetching tasks:', error)
+			res.status(500).json({ success: false, error: 'Internal server error' })
 		}
-
-		const tasks = await Task.find({ projectId }).sort({ createdAt: -1 })
-		res.status(200).json({ success: true, count: tasks.length, data: tasks })
 	})
 )
 
+// Создать задачу
 app.post(
 	'/api/tasks',
 	asyncHandler(async (req, res) => {
 		const { title, description, priority, projectId } = req.body
-
-		// Basic validation
 		if (!title || !projectId) {
-			return res
-				.status(400)
-				.json({ success: false, error: 'Title and projectId are required' })
+			return res.status(400).json({ success: false, error: 'Title and projectId are required' })
 		}
-
-		// Check if project exists
-		const project = await Project.findById(projectId)
-		if (!project) {
-			return res
-				.status(404)
-				.json({ success: false, error: 'Project not found' })
+		try {
+			const project = await Project.findById(projectId)
+			if (!project) {
+				return res.status(404).json({ success: false, error: 'Project not found' })
+			}
+			const task = await Task.create({
+				title,
+				description,
+				priority,
+				projectId,
+				completed: false
+			})
+			res.status(201).json({ success: true, data: task })
+		} catch (error) {
+			console.error('Error creating task:', error)
+			res.status(500).json({ success: false, error: 'Internal server error' })
 		}
-
-		const task = await Task.create({
-			title,
-			description,
-			priority,
-			projectId,
-			completed: false
-		})
-		res.status(201).json({ success: true, data: task })
 	})
 )
 
-// 404 handler
+// 404 обработчик
 app.use('*', (req, res) => {
 	res.status(404).json({ error: 'Route not found', path: req.originalUrl })
 })
