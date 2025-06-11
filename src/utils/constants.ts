@@ -1,7 +1,10 @@
+import dotenv from 'dotenv'
+
+dotenv.config()
+
 /**
  * Application constants
  */
-
 export const APP_CONSTANTS = {
 	// Validation
 	MIN_NAME_LENGTH: 3,
@@ -42,11 +45,18 @@ export const APP_CONSTANTS = {
  */
 export const ENV = {
 	NODE_ENV: process.env.NODE_ENV || 'development',
-	PORT: process.env.PORT || 5001,
+	PORT: parseInt(process.env.PORT || '5001'),
 	MONGODB_URI:
 		process.env.MONGODB_URI || 'mongodb://localhost:27017/todo-telegram',
 	FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000'
 } as const
+
+// Отладочная информация
+console.log('🔍 Environment loaded:')
+console.log('NODE_ENV:', ENV.NODE_ENV)
+console.log('PORT:', ENV.PORT)
+console.log('MONGODB_URI:', ENV.MONGODB_URI?.substring(0, 20) + '...')
+console.log('FRONTEND_URL:', ENV.FRONTEND_URL)
 
 /**
  * Task priority type

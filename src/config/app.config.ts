@@ -1,5 +1,8 @@
 import { CorsOptions } from 'cors'
+import dotenv from 'dotenv'
 import { HelmetOptions } from 'helmet'
+
+dotenv.config()
 
 export interface AppConfig {
 	port: number
@@ -17,25 +20,46 @@ export interface SecurityConfig {
 	}
 }
 
-export const getAppConfig = (): AppConfig => ({
-	port: parseInt(process.env.PORT || '5001', 10),
-	mongoUri:
-		process.env.MONGODB_URI || 'mongodb://localhost:27017/todo-telegram',
-	environment:
-		(process.env.NODE_ENV as 'development' | 'production') || 'development',
-	frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000'
-})
-
-export const getSecurityConfig = (isDev: boolean): SecurityConfig => ({
-	cors: {
-		origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-		credentials: true
-	},
-	helmet: {
-		contentSecurityPolicy: isDev ? false : undefined
-	},
-	rateLimiting: {
-		windowMs: 15 * 60 * 1000, // 15 minutes
-		max: 100 // limit each IP to 100 requests per windowMs
+const createAppConfig = (): AppConfig => {
+	const config = {
+		port: parseInt(process.env.PORT || '5001', 10),
+		mongoUri:
+			process.env.MONGODB_URI || 'mongodb://localhost:27017/todo-telegram',
+		environment:
+			(process.env.NODE_ENV as 'development' | 'production') || 'development',
+		frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000'
 	}
-})
+
+	console.log('🔍 App Config loaded:')
+	console.log('Port:', config.port)
+	console.log('Environment:', config.environment)
+	console.log('MongoDB URI:', config.mongoUri.substring(0, 20) + '...')
+	console.log('Frontend URL:', config.frontendUrl)
+
+	return config
+}
+
+export const appConfig = createAppConfig()
+
+export const getSecurityConfig = (isDev: boolean): SecurityConfig => {
+	console.log('🔒 Security Config:')
+	console.log('CORS Origin:', appConfig.frontendUrl)
+	console.log('Development mode:', isDev)
+
+	return {
+		cors: {
+			origin: appConfig.frontendUrl,
+			credentials: true,
+			methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+			allowedHeaders: ['Content-Type', 'Authorization']
+		},
+		helmet: {
+			contentSecurityPolicy: isDev ? false : undefined,
+			crossOriginEmbedderPolicy: false
+		},
+		rateLimiting: {
+			windowMs: 15 * 60 * 1000,
+			max: isDev ? 1000 : 100
+		}
+	}
+}

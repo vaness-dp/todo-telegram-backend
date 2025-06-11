@@ -3,7 +3,7 @@ import cors from 'cors'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
-import { getAppConfig, getSecurityConfig } from './config/app.config'
+import { appConfig, getSecurityConfig } from './config/app.config'
 import { errorHandler } from './middleware/errorHandler'
 import projectRoutes from './routes/projects'
 import taskRoutes from './routes/tasks'
@@ -11,7 +11,7 @@ import { connectDB } from './utils/database'
 
 class Server {
 	private app = express()
-	private config = getAppConfig()
+	private config = appConfig
 	private securityConfig = getSecurityConfig(
 		this.config.environment === 'development'
 	)
@@ -44,11 +44,32 @@ class Server {
 
 		// Health check
 		this.app.get('/health', (req, res) => {
-			res.status(200).json({ status: 'ok' })
+			res.status(200).json({
+				status: 'ok',
+				environment: this.config.environment,
+				timestamp: new Date().toISOString()
+			})
+		})
+
+		// Root route
+		this.app.get('/', (req, res) => {
+			res.status(200).json({
+				message: 'Todo Telegram API',
+				version: '1.0.0',
+				environment: this.config.environment
+			})
 		})
 	}
 
 	private setupErrorHandling(): void {
+		// 404 handler
+		this.app.use('*', (req, res) => {
+			res.status(404).json({
+				error: 'Route not found',
+				path: req.originalUrl
+			})
+		})
+
 		// Global error handler
 		this.app.use(errorHandler)
 	}
@@ -64,9 +85,10 @@ class Server {
 				console.log(
 					`🚀 Server running on port ${this.config.port} in ${this.config.environment} mode`
 				)
+				console.log(`📍 Frontend URL: ${this.config.frontendUrl}`)
 			})
 		} catch (error) {
-			console.error('Failed to start server:', error)
+			console.error('❌ Failed to start server:', error)
 			process.exit(1)
 		}
 	}
