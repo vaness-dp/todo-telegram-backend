@@ -2,11 +2,11 @@
 	"name": "todo-telegram-backend",
 	"version": "1.0.0",
 	"description": "Backend for Todo Telegram Bot",
-	"main": "dist/server.js",
+	"main": "dist/index.js",
 	"scripts": {
-		"start": "node dist/server.js",
-		"dev": "nodemon src/server.ts",
 		"build": "tsc",
+		"start": "node dist/index.js",
+		"dev": "ts-node-dev src/index.ts",
 		"test": "jest"
 	},
 	"keywords": [
