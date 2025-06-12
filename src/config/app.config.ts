@@ -9,6 +9,10 @@ export interface AppConfig {
 	mongoUri: string
 	environment: 'development' | 'production'
 	frontendUrl: string
+	telegram: {
+		botToken: string
+		botUsername: string
+	}
 }
 
 export interface SecurityConfig {
@@ -27,7 +31,11 @@ const createAppConfig = (): AppConfig => {
 			process.env.MONGODB_URI || 'mongodb://localhost:27017/todo-telegram',
 		environment:
 			(process.env.NODE_ENV as 'development' | 'production') || 'development',
-		frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000'
+		frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+		telegram: {
+			botToken: process.env.BOT_TOKEN || '',
+			botUsername: process.env.BOT_USERNAME || ''
+		}
 	}
 
 	console.log('🔍 App Config loaded:')
@@ -35,6 +43,7 @@ const createAppConfig = (): AppConfig => {
 	console.log('Environment:', config.environment)
 	console.log('MongoDB URI:', config.mongoUri.substring(0, 20) + '...')
 	console.log('Frontend URL:', config.frontendUrl)
+	console.log('Telegram Bot:', config.telegram.botUsername || 'Not configured')
 
 	return config
 }
@@ -51,7 +60,7 @@ export const getSecurityConfig = (isDev: boolean): SecurityConfig => {
 			origin: appConfig.frontendUrl,
 			credentials: true,
 			methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-			allowedHeaders: ['Content-Type', 'Authorization']
+			allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data']
 		},
 		helmet: {
 			contentSecurityPolicy: isDev ? false : undefined,
