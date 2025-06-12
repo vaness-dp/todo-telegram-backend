@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
 import { appConfig, getSecurityConfig } from './config/app.config'
 import { errorHandler } from './middleware/errorHandler'
+import { validateTelegramWebAppData } from './middleware/telegramAuth'
 import projectRoutes from './routes/projects'
 import taskRoutes from './routes/tasks'
 import { connectDB } from './utils/database'
@@ -23,26 +24,21 @@ class Server {
 	}
 
 	private setupMiddleware(): void {
-		// Security middleware
 		this.app.use(helmet(this.securityConfig.helmet))
 		this.app.use(cors(this.securityConfig.cors))
 		this.app.use(rateLimit(this.securityConfig.rateLimiting))
 
-		// Request parsing
 		this.app.use(express.json())
 		this.app.use(express.urlencoded({ extended: true }))
 		this.app.use(cookieParser())
 
-		// Remove x-powered-by header
 		this.app.disable('x-powered-by')
 	}
 
 	private setupRoutes(): void {
-		// API routes
-		this.app.use('/api/projects', projectRoutes)
-		this.app.use('/api/tasks', taskRoutes)
+		this.app.use('/api/projects', validateTelegramWebAppData, projectRoutes)
+		this.app.use('/api/tasks', validateTelegramWebAppData, taskRoutes)
 
-		// Health check
 		this.app.get('/health', (req, res) => {
 			res.status(200).json({
 				status: 'ok',
@@ -51,7 +47,6 @@ class Server {
 			})
 		})
 
-		// Root route
 		this.app.get('/', (req, res) => {
 			res.status(200).json({
 				message: 'Todo Telegram API',
@@ -62,7 +57,6 @@ class Server {
 	}
 
 	private setupErrorHandling(): void {
-		// 404 handler
 		this.app.use('*', (req, res) => {
 			res.status(404).json({
 				error: 'Route not found',
@@ -70,17 +64,14 @@ class Server {
 			})
 		})
 
-		// Global error handler
 		this.app.use(errorHandler)
 	}
 
 	public async start(): Promise<void> {
 		try {
-			// Connect to database
 			await connectDB(this.config.mongoUri)
 			console.log('✅ Connected to MongoDB')
 
-			// Start server
 			this.app.listen(this.config.port, () => {
 				console.log(
 					`🚀 Server running on port ${this.config.port} in ${this.config.environment} mode`
@@ -94,6 +85,5 @@ class Server {
 	}
 }
 
-// Start server
 const server = new Server()
 server.start()
