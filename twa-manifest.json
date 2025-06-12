@@ -1,0 +1,9 @@
+{
+	"name": "Todo App",
+	"description": "Todo application as Telegram Mini App",
+	"version": "1.0.0",
+	"permissions": ["read", "write"],
+	"bot_name": "YourBotName",
+	"app_url": "https://your-vercel-frontend-url.vercel.app",
+	"scope": ["users_data"]
+}
