@@ -1,26 +1,38 @@
-# 📚 Todo API Documentation
+# 📚 Документация Todo API
 
-## 🌐 Base URL
+## 🌐 Базовый URL
 
 ```
 http://localhost:5001/api
 ```
 
-## 🔑 Authentication
+## 🔑 Аутентификация
 
-> ⚠️ Currently using simple userId-based authentication. JWT implementation planned for future releases.
+Все API эндпоинты требуют аутентификации через Telegram Mini App. Каждый запрос должен содержать заголовок `x-telegram-init-data` с данными инициализации Telegram Web App.
 
-## 🚦 Rate Limiting
+```typescript
+interface TelegramUser {
+	id: number
+	first_name: string
+	last_name?: string
+	username?: string
+	language_code?: string
+}
+```
 
-- **Window**: 15 minutes
-- **Max Requests**: 100 per IP
-- **Status Code**: 429 Too Many Requests
+Сервер проверяет подпись данных Telegram с помощью токена бота для обеспечения подлинности запроса.
 
-## 🏗 Common Patterns
+## 🚦 Ограничение запросов
 
-### Response Format
+- **Окно**: 15 минут
+- **Максимум запросов**: 100 на IP
+- **Код статуса**: 429 Too Many Requests
 
-**Success Response:**
+## 🏗 Общие паттерны
+
+### Формат ответа
+
+**Успешный ответ:**
 
 ```typescript
 interface SuccessResponse<T> {
@@ -30,7 +42,7 @@ interface SuccessResponse<T> {
 }
 ```
 
-**Error Response:**
+**Ответ с ошибкой:**
 
 ```typescript
 interface ErrorResponse {
@@ -40,7 +52,7 @@ interface ErrorResponse {
 }
 ```
 
-### Pagination
+### Пагинация
 
 ```typescript
 interface PaginatedResponse<T> {
@@ -53,57 +65,55 @@ interface PaginatedResponse<T> {
 }
 ```
 
-## 📁 Projects API
+## 📁 API Проектов
 
-### Get Projects List
+### Получение списка проектов
 
 ```http
 GET /projects
 ```
 
-**Query Parameters:**
+**Параметры запроса:**
 
-| Parameter | Type   | Description    | Required |
-| --------- | ------ | -------------- | -------- |
-| userId    | string | Filter by user | Yes      |
-| page      | number | Page number    | No       |
-| limit     | number | Items per page | No       |
+| Параметр | Тип    | Описание          | Обязательный |
+| -------- | ------ | ----------------- | ------------ |
+| page     | number | Номер страницы    | Нет          |
+| limit    | number | Элементов на стр. | Нет          |
 
-**Response:** `SuccessResponse<PaginatedResponse<IProject>>`
+**Ответ:** `SuccessResponse<PaginatedResponse<IProject>>`
 
-### Get Project Details
+### Получение деталей проекта
 
 ```http
 GET /projects/{projectId}
 ```
 
-**Response:** `SuccessResponse<IProject>`
+**Ответ:** `SuccessResponse<IProject>`
 
-### Create Project
+### Создание проекта
 
 ```http
 POST /projects
 ```
 
-**Request Body:** `CreateProjectDto`
+**Тело запроса:** `CreateProjectDto`
 
 ```typescript
 interface CreateProjectDto {
-	name: string // max 100 chars
-	description: string // max 500 chars
-	userId: string
+	name: string // макс. 100 символов
+	description: string // макс. 500 символов
 }
 ```
 
-**Response:** `SuccessResponse<IProject>`
+**Ответ:** `SuccessResponse<IProject>`
 
-### Update Project
+### Обновление проекта
 
 ```http
 PUT /projects/{projectId}
 ```
 
-**Request Body:** `UpdateProjectDto`
+**Тело запроса:** `UpdateProjectDto`
 
 ```typescript
 interface UpdateProjectDto {
@@ -112,23 +122,23 @@ interface UpdateProjectDto {
 }
 ```
 
-**Response:** `SuccessResponse<IProject>`
+**Ответ:** `SuccessResponse<IProject>`
 
-### Delete Project
+### Удаление проекта
 
 ```http
 DELETE /projects/{projectId}
 ```
 
-**Response:** `SuccessResponse<void>`
+**Ответ:** `SuccessResponse<void>`
 
-### Get Project Statistics
+### Статистика проекта
 
 ```http
 GET /projects/{projectId}/stats
 ```
 
-**Response:**
+**Ответ:**
 
 ```typescript
 interface ProjectStats {
@@ -144,60 +154,60 @@ interface ProjectStats {
 }
 ```
 
-## ✅ Tasks API
+## ✅ API Задач
 
-### Get Project Tasks
+### Получение задач проекта
 
 ```http
 GET /projects/{projectId}/tasks
 ```
 
-**Query Parameters:**
+**Параметры запроса:**
 
-| Parameter | Type    | Description                        | Default   |
-| --------- | ------- | ---------------------------------- | --------- |
-| completed | boolean | Filter by completion status        | -         |
-| priority  | string  | Filter by priority                 | -         |
-| sort      | string  | Sort by (priority/completed/title) | createdAt |
-| page      | number  | Page number                        | 1         |
-| limit     | number  | Items per page                     | 10        |
+| Параметр  | Тип     | Описание              | По умолчанию |
+| --------- | ------- | --------------------- | ------------ |
+| completed | boolean | Фильтр по статусу     | -            |
+| priority  | string  | Фильтр по приоритету  | -            |
+| sort      | string  | Сортировка            | createdAt    |
+| page      | number  | Номер страницы        | 1            |
+| limit     | number  | Элементов на странице | 10           |
 
-**Response:** `SuccessResponse<PaginatedResponse<ITask>>`
+**Ответ:** `SuccessResponse<PaginatedResponse<ITask>>`
 
-### Get Task Details
+### Получение деталей задачи
 
 ```http
 GET /tasks/{taskId}
 ```
 
-**Response:** `SuccessResponse<ITask>`
+**Ответ:** `SuccessResponse<ITask>`
 
-### Create Task
+### Создание задачи
 
 ```http
 POST /tasks
 ```
 
-**Request Body:** `CreateTaskDto`
+**Тело запроса:** `CreateTaskDto`
 
 ```typescript
 interface CreateTaskDto {
-	title: string // max 200 chars
-	description?: string // max 1000 chars
+	title: string // макс. 200 символов
+	description?: string // макс. 1000 символов
 	priority: 'high' | 'medium' | 'low'
 	projectId: string
 }
 ```
 
-**Response:** `SuccessResponse<ITask>`
+**Ответ:** `SuccessResponse<ITask>`
 
-### Update Task
+### Обновление задачи
 
 ```http
 PUT /tasks/{taskId}
 ```
 
-**Request Body:** `UpdateTaskDto`
+**Тело запроса:** `UpdateTaskDto`
 
 ```typescript
 interface UpdateTaskDto {
@@ -208,31 +218,31 @@ interface UpdateTaskDto {
 }
 ```
 
-**Response:** `SuccessResponse<ITask>`
+**Ответ:** `SuccessResponse<ITask>`
 
-### Toggle Task Status
+### Переключение статуса задачи
 
 ```http
 PATCH /tasks/{taskId}/toggle
 ```
 
-**Response:** `SuccessResponse<ITask>`
+**Ответ:** `SuccessResponse<ITask>`
 
-### Delete Task
+### Удаление задачи
 
 ```http
 DELETE /tasks/{taskId}
 ```
 
-**Response:** `SuccessResponse<void>`
+**Ответ:** `SuccessResponse<void>`
 
-### Bulk Update Tasks
+### Массовое обновление задач
 
 ```http
 PATCH /tasks/bulk
 ```
 
-**Request Body:**
+**Тело запроса:**
 
 ```typescript
 interface BulkUpdateTasksDto {
@@ -244,58 +254,76 @@ interface BulkUpdateTasksDto {
 }
 ```
 
-**Response:** `SuccessResponse<{ modifiedCount: number }>`
+**Ответ:** `SuccessResponse<{ modifiedCount: number }>`
 
-## 🔒 Security
+## 🔒 Безопасность
 
-### CORS Configuration
+### Аутентификация Telegram
+
+```typescript
+// Middleware для проверки данных Telegram
+const validateTelegramWebAppData = (
+	req: Request,
+	res: Response,
+	next: NextFunction
+) => {
+	const initData = req.headers['x-telegram-init-data']
+	// Проверяет подпись данных Telegram
+	// Извлекает информацию о пользователе
+	// Прикрепляет пользователя к запросу
+}
+```
+
+### Настройка CORS
 
 ```typescript
 const corsOptions = {
 	origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-	credentials: true
+	credentials: true,
+	methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+	allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data']
 }
 ```
 
-### HTTP Headers (Helmet)
+### HTTP Заголовки (Helmet)
 
 ```typescript
 const helmetOptions = {
 	contentSecurityPolicy:
-		process.env.NODE_ENV === 'development' ? false : undefined
+		process.env.NODE_ENV === 'development' ? false : undefined,
+	crossOriginEmbedderPolicy: false
 }
 ```
 
-## 📊 Status Codes
+## 📊 Коды статусов
 
-| Code | Description             |
-| ---- | ----------------------- |
-| 200  | Success - GET/PUT/PATCH |
-| 201  | Created - POST          |
-| 400  | Bad Request             |
-| 401  | Unauthorized            |
-| 403  | Forbidden               |
-| 404  | Not Found               |
-| 429  | Too Many Requests       |
-| 500  | Server Error            |
+| Код | Описание               |
+| --- | ---------------------- |
+| 200 | Успех - GET/PUT/PATCH  |
+| 201 | Создано - POST         |
+| 400 | Неверный запрос        |
+| 401 | Не авторизован         |
+| 403 | Запрещено              |
+| 404 | Не найдено             |
+| 429 | Слишком много запросов |
+| 500 | Ошибка сервера         |
 
-## 📋 Data Models
+## 📋 Модели данных
 
-### Project Model
+### Модель проекта
 
 ```typescript
 interface IProject extends Document {
 	_id: string
 	name: string
 	description: string
-	userId: string
-	tasks?: ITask[] // Virtual
+	tasks?: ITask[] // Виртуальное поле
 	createdAt: Date
 	updatedAt: Date
 }
 ```
 
-### Task Model
+### Модель задачи
 
 ```typescript
 interface ITask extends Document {
@@ -310,9 +338,9 @@ interface ITask extends Document {
 }
 ```
 
-## 🔄 Service Layer
+## 🔄 Сервисный слой
 
-### Base Service
+### Базовый сервис
 
 ```typescript
 class BaseService<T extends Document> {
@@ -328,15 +356,14 @@ class BaseService<T extends Document> {
 }
 ```
 
-## 🧪 Testing
+## 🧪 Тестирование
 
-### Example Test Request
+### Пример тестового запроса
 
 ```typescript
 const response = await request(app).post('/api/projects').send({
-	name: 'Test Project',
-	description: 'Test Description',
-	userId: 'test-user-id'
+	name: 'Тестовый проект',
+	description: 'Тестовое описание'
 })
 
 expect(response.status).toBe(201)
