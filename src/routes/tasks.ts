@@ -1,27 +1,24 @@
 import express from 'express'
 import {
-	bulkUpdateTasks,
 	createTask,
 	deleteTask,
 	getTask,
-	toggleTask,
+	getTasks,
 	updateTask
-} from '../controllers/task.controller.js'
+} from '../controllers/task.controller'
 import {
-	validateBulkUpdate,
 	validateObjectId,
 	validateTask,
 	validateUpdateTask
-} from '../middleware/validation.js'
+} from '../middleware/validation'
 
 const router = express.Router()
 
 // Task routes
-router.route('/').post([validateTask, createTask] as express.RequestHandler[])
-
 router
-	.route('/bulk')
-	.patch([validateBulkUpdate, bulkUpdateTasks] as express.RequestHandler[])
+	.route('/')
+	.get(getTasks as express.RequestHandler)
+	.post([validateTask, createTask] as express.RequestHandler[])
 
 router
 	.route('/:id')
@@ -32,10 +29,5 @@ router
 		updateTask
 	] as express.RequestHandler[])
 	.delete([validateObjectId, deleteTask] as express.RequestHandler[])
-
-router.patch('/:id/toggle', [
-	validateObjectId,
-	toggleTask
-] as express.RequestHandler[])
 
 export default router

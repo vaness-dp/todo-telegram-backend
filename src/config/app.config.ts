@@ -52,16 +52,34 @@ export const appConfig = createAppConfig()
 
 export const getSecurityConfig = (isDev: boolean): SecurityConfig => {
 	console.log('🔒 Security Config:')
-	console.log('CORS Origin:', appConfig.frontendUrl)
+	console.log(
+		'CORS Origin:',
+		isDev ? 'Development mode - allowing all origins' : appConfig.frontendUrl
+	)
 	console.log('Development mode:', isDev)
 
 	return {
-		cors: {
-			origin: appConfig.frontendUrl,
-			credentials: true,
-			methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-			allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data']
-		},
+		cors: isDev
+			? {
+					origin: true, // Allow all origins in development
+					credentials: true,
+					methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+					allowedHeaders: [
+						'Content-Type',
+						'Authorization',
+						'x-telegram-init-data'
+					]
+			  }
+			: {
+					origin: appConfig.frontendUrl,
+					credentials: true,
+					methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+					allowedHeaders: [
+						'Content-Type',
+						'Authorization',
+						'x-telegram-init-data'
+					]
+			  },
 		helmet: {
 			contentSecurityPolicy: isDev ? false : undefined,
 			crossOriginEmbedderPolicy: false

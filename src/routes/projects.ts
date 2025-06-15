@@ -6,14 +6,14 @@ import {
 	getProjects,
 	getProjectStats,
 	updateProject
-} from '../controllers/project.controller.js'
-import { getTasks } from '../controllers/task.controller.js'
+} from '../controllers/project.controller'
+import { getTasks } from '../controllers/task.controller'
 import {
 	validateObjectId,
 	validateProject,
 	validateProjectId,
 	validateUpdateProject
-} from '../middleware/validation.js'
+} from '../middleware/validation'
 
 const router = express.Router()
 

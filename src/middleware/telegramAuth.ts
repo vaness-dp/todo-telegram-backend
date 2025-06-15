@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import { NextFunction, Request, Response } from 'express'
+import { appConfig } from '../config/app.config'
 
 const BOT_TOKEN = process.env.BOT_TOKEN || ''
 
@@ -21,6 +22,16 @@ export const validateTelegramWebAppData = (
 	res: Response,
 	next: NextFunction
 ) => {
+	// Skip validation in development
+	if (appConfig.environment === 'development') {
+		req.telegramUser = {
+			id: 12345,
+			first_name: 'Dev',
+			username: 'dev_user'
+		}
+		return next()
+	}
+
 	try {
 		const initData = req.headers['x-telegram-init-data'] as string
 		if (!initData) {
